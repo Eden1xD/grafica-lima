@@ -77,9 +77,7 @@ export async function PortalShell({ user, tabs, homeHref, children }: { user: Se
     </form>
   </div>
 </div>
-        <div className="md:hidden">
-          <PortalTabs tabs={tabs} homeHref={homeHref} />
-        </div>
+        
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
     </div>
