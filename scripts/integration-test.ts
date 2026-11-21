@@ -100,9 +100,9 @@ async function main() {
     check("elegibilidade do certificado", elig.eligible);
     const code = randomCode(12);
     await db.insert(certificates).values({ enrollmentId: e.id, code, workloadHours: 60, finalGradeH: 850, attendancePct: 100 });
-<<<<<<< HEAD
+
     const pdf = await certificatePdf({ studentName: u1.name, courseName: "Curso Teste", workloadHours: 60, issuedAt: new Date(), code, verifyUrl: `https://example.com/certificados/verificar/${code}`, institutionName: "Gráfica Lima" });
-=======
+
     const pdf = await certificatePdf({
   studentName: u1.name,
   courseName: "Curso Teste",
@@ -113,7 +113,7 @@ async function main() {
   institutionName: "Gráfica Lima",
   syllabus: "Introdução ao curso\nMódulo 1 — Fundamentos\nMódulo 2 — Práticas",
 });
->>>>>>> a609077 (Primeira versão do projeto)
+
     check("PDF de certificado gerado (%PDF)", Buffer.from(pdf.slice(0, 4)).toString() === "%PDF");
 
     // 7) Múltiplos cargos: mesma conta, várias funções
