@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Gráfica Lima — Cursos Presenciais",
+  "short_name": "Gráfica Lima",
+  "description": "Cursos presenciais de informática: matrículas, notas, frequência, pagamentos e certificados.",
+  "lang": "pt-BR",
+  "start_url": "/aluno",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F6F8F6",
+  "theme_color": "#07585B",
+  "icons": [
+    { "src": "/images/logo.jpeg", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/logo.jpeg", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Meus cursos", "url": "/aluno", "icons": [{ "src": "/images/logo.jpeg", "sizes": "512x512" }] },
+    { "name": "Financeiro", "url": "/aluno/financeiro", "icons": [{ "src": "/images/logo.jpeg", "sizes": "512x512" }] },
+    { "name": "Notificações", "url": "/notificacoes", "icons": [{ "src": "/images/logo.jpeg", "sizes": "512x512" }] }
+  ]
+}
