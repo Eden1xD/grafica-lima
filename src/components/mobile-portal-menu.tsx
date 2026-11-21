@@ -74,10 +74,9 @@ export function MobilePortalMenu({
             />
 
             <aside
-              aria-label="Menu do portal"
-              onSubmitCapture={() => setOpen(false)}
-              className="fixed inset-y-0 left-0 z-[9999] flex w-[85vw] max-w-[21rem] flex-col border-r border-line bg-surface shadow-2xl"
-            >
+  aria-label="Menu do portal"
+  className="fixed inset-y-0 left-0 z-[9999] flex w-[85vw] max-w-[21rem] flex-col border-r border-line bg-surface shadow-2xl"
+>
               <div className="flex items-center justify-between border-b border-line px-4 py-4">
                 <Link
                   href={homeHref}
