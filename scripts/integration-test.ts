@@ -101,7 +101,7 @@ async function main() {
     const code = randomCode(12);
     await db.insert(certificates).values({ enrollmentId: e.id, code, workloadHours: 60, finalGradeH: 850, attendancePct: 100 });
 
-    const pdf = await certificatePdf({ studentName: u1.name, courseName: "Curso Teste", workloadHours: 60, issuedAt: new Date(), code, verifyUrl: `https://example.com/certificados/verificar/${code}`, institutionName: "Gráfica Lima" });
+   
 
     const pdf = await certificatePdf({
   studentName: u1.name,
