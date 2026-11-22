@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { certificateTemplates } from "@/db/schema";
 import { assertRole, ADMIN } from "@/lib/auth/guards";
-import { DEFAULT_LAYOUT, type Layout, type Sponsor } from "@/lib/certificate-template";
+import {
+  DEFAULT_LAYOUT,
+  type Layout,
+  type Sponsor,
+} from "@/lib/certificate-layout";
 
 const MAX_PDF = 8 * 1024 * 1024;
 export async function uploadCertificateModel(fd: FormData) {
@@ -21,7 +25,9 @@ export async function saveCertificateModel(id:string, layout:Layout, sponsors:Sp
  if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("ID invalido");
  if(JSON.stringify(layout).length>15000||JSON.stringify(sponsors).length>2_000_000||sponsors.length>12) throw new Error("Limite de configuracao excedido");
  for(const s of sponsors) if(!/^data:image\/(png|jpeg);base64,/.test(s.image)||s.width<1||s.height<1) throw new Error("Patrocinador invalido");
- await db.update(certificateTemplates).set({layout,sponsors,updatedAt:new Date()}).where(eq(certificateTemplates.id,id));
+await db.update(certificateTemplates)
+  .set({ layout, sponsors })
+  .where(eq(certificateTemplates.id, id));
  revalidatePath("/admin/certificados/modelos");
 }
 export async function publishCertificateModel(id:string) {
@@ -30,7 +36,9 @@ export async function publishCertificateModel(id:string) {
  if(!model) throw new Error("Modelo nao encontrado");
  await db.transaction(async tx=>{
   await tx.update(certificateTemplates).set({active:false}).where(model.courseId?eq(certificateTemplates.courseId,model.courseId):isNull(certificateTemplates.courseId));
-  await tx.update(certificateTemplates).set({active:true,updatedAt:new Date()}).where(eq(certificateTemplates.id,id));
+  await tx.update(certificateTemplates)
+  .set({ active: true })
+  .where(eq(certificateTemplates.id, id));
  });
  revalidatePath("/admin/certificados/modelos");
 }

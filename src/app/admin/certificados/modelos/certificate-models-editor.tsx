@@ -23,7 +23,21 @@ const example: Record<FieldName, string> = {
 const button = "rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800";
 const input = "w-full rounded-lg border border-slate-300 bg-transparent px-2.5 py-2 text-sm dark:border-slate-700";
 const panel = "rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900";
-const merge = (value: unknown): Layout => ({ ...DEFAULT_LAYOUT, ...((value && typeof value === "object" ? value : {}) as Layout), texts: Array.isArray((value as Layout)?.texts) ? (value as Layout).texts : [], shapes: Array.isArray((value as Layout)?.shapes) ? (value as Layout).shapes : [] });
+const merge = (value: unknown): Layout => {
+  const saved =
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+      ? (value as Layout)
+      : {};
+
+  return {
+    ...DEFAULT_LAYOUT,
+    ...saved,
+    texts: Array.isArray(saved.texts) ? saved.texts : [],
+    shapes: Array.isArray(saved.shapes) ? saved.shapes : [],
+  };
+};
 const readSponsors = (value: unknown): Sponsor[] => Array.isArray(value) ? value as Sponsor[] : [];
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
@@ -74,6 +88,7 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
   const [showGrid, setShowGrid] = useState(false);
   const [snap, setSnap] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
   const [pdfError, setPdfError] = useState("");
   const [pageSize, setPageSize] = useState({ width: W, height: H });
@@ -84,17 +99,29 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
   const url = id ? `/api/certificados/modelos/${encodeURIComponent(id)}/arquivo` : "";
   const model = models.find(m => m.id === id);
   const texts = layout.texts ?? [], shapes = layout.shapes ?? [];
-  const current: (Placement & { width?: number; height?: number; text?: string; type?: string }) | undefined =
-    selected === "qr" ? layout.qr : selected.startsWith("sponsor:") ? sponsors.find(s => s.id === selected.slice(8)) :
-    selected.startsWith("text:") ? texts.find(t => t.id === selected.slice(5)) :
-    selected.startsWith("shape:") ? shapes.find(s => s.id === selected.slice(6)) as Placement | undefined : layout[selected as FieldName];
+ type SelectedElement =
+  | Placement
+  | TextElement
+  | Sponsor
+  | ShapeElement
+  | NonNullable<Layout["qr"]>;
+  const current: SelectedElement | undefined =
+    selected === "qr" ? layout.qr
+    : selected.startsWith("sponsor:") ? sponsors.find(s => s.id === selected.slice(8))
+    : selected.startsWith("text:") ? texts.find(t => t.id === selected.slice(5))
+    : selected.startsWith("shape:") ? shapes.find(s => s.id === selected.slice(6))
+    : layout[selected as FieldName];
+
 
   function chooseModel(nextId: string) {
     const next = models.find(m => m.id === nextId); if (!next) return;
+    if (dirty && !window.confirm("Existem alterações não salvas. Deseja trocar de modelo mesmo assim?")) return;
+    setDirty(false);
     setId(next.id); setLayout(merge(next.layout)); setSponsors(readSponsors(next.sponsors));
     setSelected("studentName"); setPage(0); setMessage(""); setPdfError("");
   }
   function update(key: string, value: string | number | boolean, item: Item = selected) {
+    setDirty(true);
     if (item.startsWith("sponsor:")) setSponsors(prev => prev.map(s => s.id === item.slice(8) ? { ...s, [key]: value } : s));
     else if (item.startsWith("text:")) setLayout(prev => ({ ...prev, texts: (prev.texts ?? []).map(t => t.id === item.slice(5) ? { ...t, [key]: value } : t) }));
     else if (item.startsWith("shape:")) setLayout(prev => ({ ...prev, shapes: (prev.shapes ?? []).map(s => s.id === item.slice(6) ? { ...s, [key]: value } : s) }));
@@ -102,20 +129,24 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
     else setLayout(prev => ({ ...prev, [item]: { ...prev[item as FieldName]!, [key]: value } }));
   }
   function addText() {
+    setDirty(true);
     const id = crypto.randomUUID();
     setLayout(prev => ({ ...prev, texts: [...(prev.texts ?? []), { id, name: "Texto personalizado", text: "Novo texto", page, x: 90, y: 90, size: 16, maxWidth: 320, color: "#222222" }] }));
     setSelected(`text:${id}`);
   }
   function addShape(type: ShapeElement["type"]) {
+    setDirty(true);
     const id = crypto.randomUUID();
     setLayout(prev => ({ ...prev, shapes: [...(prev.shapes ?? []), { id, name: type === "line" ? "Linha" : type === "ellipse" ? "Círculo" : "Retângulo", type, page, x: 90, y: 120, width: 140, height: type === "line" ? 0 : 55, color: "#0d9488", opacity: 0.5, borderWidth: 2 }] }));
     setSelected(`shape:${id}`);
   }
   function duplicate() {
+    setDirty(true);
     if (selected.startsWith("text:")) { const t = texts.find(t => t.id === selected.slice(5)); if (!t) return; const id = crypto.randomUUID(); setLayout(prev => ({ ...prev, texts: [...(prev.texts ?? []), { ...t, id, x: t.x + 15, y: t.y + 15 }] })); setSelected(`text:${id}`); }
     else if (selected.startsWith("shape:")) { const s = shapes.find(s => s.id === selected.slice(6)); if (!s) return; const id = crypto.randomUUID(); setLayout(prev => ({ ...prev, shapes: [...(prev.shapes ?? []), { ...s, id, x: s.x + 15, y: s.y + 15 }] })); setSelected(`shape:${id}`); }
   }
   function remove() {
+    setDirty(true);
     if (selected.startsWith("sponsor:")) setSponsors(prev => prev.filter(s => s.id !== selected.slice(8)));
     else if (selected.startsWith("text:")) setLayout(prev => ({ ...prev, texts: (prev.texts ?? []).filter(t => t.id !== selected.slice(5)) }));
     else if (selected.startsWith("shape:")) setLayout(prev => ({ ...prev, shapes: (prev.shapes ?? []).filter(s => s.id !== selected.slice(6)) }));
@@ -123,6 +154,7 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
     setSelected("studentName");
   }
   function addSponsor(file: File) {
+    setDirty(true);
     if (file.size > 300_000 || !["image/png", "image/jpeg"].includes(file.type)) { setMessage("Envie PNG/JPG de até 300 KB."); return; }
     const reader = new FileReader();
     reader.onload = () => { const id = crypto.randomUUID(); setSponsors(prev => [...prev, { id, name: file.name, image: String(reader.result), page, x: 420, y: 430, width: 90, height: 60 }]); setSelected(`sponsor:${id}`); };
@@ -175,8 +207,8 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
         <select aria-label="Modelo" className={`${input} max-w-xs`} value={id} onChange={e => chooseModel(e.target.value)}>{models.map(m => <option key={m.id} value={m.id}>{m.name}{m.active ? " • Publicado" : ""}</option>)}</select>
         <div className="flex-1" />
         <a className={button} href={url} target="_blank" rel="noreferrer">Abrir PDF original</a>
-        <button type="button" disabled={busy} className={button} onClick={() => void run(() => saveCertificateModel(id, layout, sponsors), "Alterações salvas.")}>Salvar alterações</button>
-        <button type="button" disabled={busy} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-600" onClick={() => void run(async () => { await saveCertificateModel(id, layout, sponsors); await publishCertificateModel(id); }, "Modelo publicado. Atualize para ver o status.")}>Publicar modelo</button>
+        <button type="button" disabled={busy} className={button} onClick={() => void run(async () => { await saveCertificateModel(id, layout, sponsors); setDirty(false); }, "Alterações salvas.")}>Salvar alterações</button>
+        <button type="button" disabled={busy} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-600" onClick={() => void run(async () => { await saveCertificateModel(id, layout, sponsors); await publishCertificateModel(id); setDirty(false); }, "Modelo publicado. Atualize para ver o status.")}>Publicar modelo</button>
       </div>
       <div className="grid items-start gap-3 xl:grid-cols-[210px_minmax(0,1fr)_310px]">
         <aside className={`${panel} space-y-4`}><h2 className="font-semibold">Adicionar elementos</h2>
@@ -204,14 +236,14 @@ export function CertificateModelsEditor({ models }: { models: Model[] }) {
         <aside className={`${panel} space-y-4`}><h2 className="font-semibold">Propriedades</h2><select className={input} value={selected} onChange={e => select(e.target.value as Item)}>{names.map(n => <option key={n.key} value={n.key}>{n.label}</option>)}<option value="qr">QR Code</option>{texts.map(t => <option key={t.id} value={`text:${t.id}`}>{t.name ?? t.text}</option>)}{shapes.map(s => <option key={s.id} value={`shape:${s.id}`}>{s.name ?? s.type}</option>)}{sponsors.map(s => <option key={s.id} value={`sponsor:${s.id}`}>{s.name}</option>)}</select>
           {current && <><div className="grid grid-cols-2 gap-2">{numberInput("x", "Posição X")}{numberInput("y", "Posição Y")}</div><label className="block text-xs font-semibold text-slate-500">Página<select className={`${input} mt-1`} value={current.page} onChange={e => { update("page", Number(e.target.value)); setPage(Number(e.target.value)); }}><option value={0}>Frente</option><option value={1}>Verso</option></select></label>
             {textSelected && <><h3 className="border-t pt-3 text-sm font-semibold dark:border-slate-700">Tipografia</h3>{selected.startsWith("text:") && <label className="block text-xs font-semibold">Conteúdo<textarea className={`${input} mt-1 min-h-24`} value={(current as TextElement).text} onChange={e => update("text", e.target.value)} /></label>}
-              <label className="block text-xs font-semibold text-slate-500">Família da fonte<select className={`${input} mt-1`} value={current.font ?? "Helvetica"} onChange={e => update("font", e.target.value)}><option value="Helvetica">Helvetica / Arial</option><option value="TimesRoman">Times New Roman</option><option value="Courier">Courier</option></select></label>
+              <label className="block text-xs font-semibold text-slate-500">Família da fonte<select className={`${input} mt-1`} value={(current as Placement & ShapeElement & Sponsor).font ?? "Helvetica"} onChange={e => update("font", e.target.value)}><option value="Helvetica">Helvetica / Arial</option><option value="TimesRoman">Times New Roman</option><option value="Courier">Courier</option></select></label>
               <div className="grid grid-cols-2 gap-2">{numberInput("size", "Tamanho", 3, 150)}{numberInput("maxWidth", "Largura máxima", 20, 842)}</div>
               <div className="flex flex-wrap gap-4">{toggle("bold", "Negrito")}{toggle("italic", "Itálico")}{toggle("hidden", "Ocultar")}</div>
-              <label className="block text-xs font-semibold text-slate-500">Alinhamento<select className={`${input} mt-1`} value={current.align ?? "left"} onChange={e => update("align", e.target.value)}><option value="left">Esquerda</option><option value="center">Centralizado</option><option value="right">Direita</option></select></label>
+              <label className="block text-xs font-semibold text-slate-500">Alinhamento<select className={`${input} mt-1`} value={(current as Placement & ShapeElement & Sponsor).align ?? "left"} onChange={e => update("align", e.target.value)}><option value="left">Esquerda</option><option value="center">Centralizado</option><option value="right">Direita</option></select></label>
               <div className="grid grid-cols-2 gap-2">{numberInput("lineHeight", "Entrelinhas", 0.8, 3)}{numberInput("rotation", "Rotação", -360, 360)}</div>
             </>}
-            {(textSelected || shapeSelected) && <label className="block text-xs font-semibold text-slate-500">Cor<input type="color" className="mt-1 h-10 w-full cursor-pointer" value={current.color ?? "#222222"} onChange={e => update("color", e.target.value)} /></label>}
-            {(textSelected || shapeSelected || imageSelected) && <label className="block text-xs font-semibold text-slate-500">Opacidade ({Math.round((current.opacity ?? 1) * 100)}%)<input type="range" className="mt-2 w-full" min={0} max={100} value={Math.round((current.opacity ?? 1) * 100)} onChange={e => update("opacity", Number(e.target.value) / 100)} /></label>}
+            {(textSelected || shapeSelected) && <label className="block text-xs font-semibold text-slate-500">Cor<input type="color" className="mt-1 h-10 w-full cursor-pointer" value={(current as Placement & ShapeElement & Sponsor).color ?? "#222222"} onChange={e => update("color", e.target.value)} /></label>}
+            {(textSelected || shapeSelected || imageSelected) && <label className="block text-xs font-semibold text-slate-500">Opacidade ({Math.round(((current as Placement & ShapeElement & Sponsor).opacity ?? 1) * 100)}%)<input type="range" className="mt-2 w-full" min={0} max={100} value={Math.round(((current as Placement & ShapeElement & Sponsor).opacity ?? 1) * 100)} onChange={e => update("opacity", Number(e.target.value) / 100)} /></label>}
             {shapeSelected && <div className="grid grid-cols-2 gap-2">{numberInput("width", "Largura", 1, 842)}{numberInput("height", "Altura", 0, 595)}</div>}
             {imageSelected && <><div className="grid grid-cols-2 gap-2">{numberInput("width", "Largura", 1, 842)}{numberInput("height", "Altura", 1, 595)}</div>{numberInput("rotation", "Rotação", -360, 360)}</>}
             {selected === "qr" && numberInput("size", "Tamanho do QR", 10, 250)}

@@ -6,11 +6,16 @@ import { deleteTeacherAction, updateTeacherAction } from "@/server/actions/admin
 import type { ActionState } from "@/server/actions/types";
 
 type Teacher = { id: string; name: string; email: string; specialties: string; bio: string; publicVisible: boolean };
-const initialState: ActionState = { success: false, message: "" };
+const initialState: ActionState = {
+  status: "idle",
+  message: "",
+};
 
 function TeacherDialog({ teacher, mode, onClose }: { teacher: Teacher; mode: "edit" | "delete"; onClose: () => void }) {
   const [state, action, pending] = useActionState(mode === "edit" ? updateTeacherAction : deleteTeacherAction, initialState);
-  useEffect(() => { if (state.success) onClose(); }, [state.success, onClose]);
+  useEffect(() => {
+  if (state.status === "ok") onClose();
+}, [state.status, onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={mode === "edit" ? "Editar professor" : "Excluir professor"} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line bg-surface p-6 text-ink shadow-2xl">
@@ -34,11 +39,32 @@ function TeacherDialog({ teacher, mode, onClose }: { teacher: Teacher; mode: "ed
               <label className="block text-sm font-medium">Senha da sua conta administrativa<input name="adminPassword" type="password" autoComplete="current-password" required className="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2" /></label>
             </>
           )}
-          {state.message && !state.success ? <p role="alert" className="text-sm text-red-500">{state.message}</p> : null}
+          {state.message && state.status === "error" ? <p role="alert" className="text-sm text-red-500">{state.message}</p> : null}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm">Cancelar</button>
-            <button type="submit" disabled={pending} className={mode === "delete" ? "rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" : "rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"}>{pending ? "Aguarde..." : mode === "edit" ? "Salvar alterações" : "Confirmar exclusão"}</button>
-          </div>
+  <button
+    type="button"
+    onClick={onClose}
+    className="rounded-lg border border-line px-4 py-2 text-sm"
+  >
+    Cancelar
+  </button>
+
+  <button
+    type="submit"
+    disabled={pending}
+    className={
+      mode === "delete"
+        ? "rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        : "rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+    }
+  >
+    {pending
+      ? "Aguarde..."
+      : mode === "edit"
+        ? "Salvar alterações"
+        : "Confirmar exclusão"}
+  </button>
+</div>
         </form>
       </div>
     </div>

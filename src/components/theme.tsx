@@ -16,9 +16,20 @@ export function ThemeScript() {
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const [dark, setDark] = useState(false);
-  useEffect(() => {
+  
+
+useEffect(() => {
+  const observer = new MutationObserver(() => {
     setDark(document.documentElement.classList.contains("dark"));
-  }, []);
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  return () => observer.disconnect();
+}, []);
   function toggle() {
     const next = !dark;
     setDark(next);
