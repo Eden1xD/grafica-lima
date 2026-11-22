@@ -36,20 +36,43 @@ function wrapText(
   return lines;
 }
 
-export function pdfResponse(bytes: Uint8Array, filename: string): Response {
-  const ab = bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
 
-  return new Response(ab, {
+export function pdfResponse(
+  bytes: Uint8Array,
+  filename: string
+): Response {
+  const pdfBytes = new Uint8Array(bytes);
+
+  // Verifica se o arquivo começa com %PDF-
+  const header = new TextDecoder().decode(
+    pdfBytes.subarray(0, 5)
+  );
+
+  if (header !== "%PDF-") {
+    console.error(
+      "[PDF] Arquivo inválido. Cabeçalho:",
+      header
+    );
+
+    return Response.json(
+      { error: "O arquivo gerado não é um PDF válido." },
+      { status: 500 }
+    );
+  }
+
+  return new Response(pdfBytes, {
+    status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${filename}"`,
-      "Cache-Control": "private, no-store",
+      "Content-Disposition":
+        `inline; filename="${filename}"`,
+      "Content-Length": String(pdfBytes.byteLength),
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
+
 
 export async function certificatePdf(input: {
   studentName: string;

@@ -5,6 +5,7 @@ import { enrollments, studentProfiles, userRoles, users } from "@/db/schema";
 import { requireRole, STAFF } from "@/lib/auth/guards";
 import { createStudentAction } from "@/server/actions/admin-people";
 import { DataTable } from "@/components/data-table";
+import { AdminStudentActions } from "@/components/admin-student-actions";
 import { ActionForm, Collapse } from "@/components/action-form";
 import { Field, Input, PageTitle } from "@/components/ui";
 
@@ -12,15 +13,14 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Alunos — administração" };
 
 export default async function AdminAlunosPage() {
-  await requireRole(STAFF, "/admin/alunos");
-  const rows = await db
-    .select({ user: users, profile: studentProfiles })
-    .from(users)
+  const actor = await requireRole(STAFF, "/admin/alunos");
+  const rows = await db.select({ user: users, profile: studentProfiles }).from(users)
     .leftJoin(studentProfiles, eq(studentProfiles.userId, users.id))
     .where(or(eq(users.role, "aluno"), inArray(users.id, db.select({ id: userRoles.userId }).from(userRoles).where(eq(userRoles.role, "aluno")))))
     .orderBy(asc(users.name));
   const counts = await db.select({ userId: enrollments.userId, n: count() }).from(enrollments).groupBy(enrollments.userId);
   const countMap = new Map(counts.map((c) => [c.userId, Number(c.n)]));
+  const canDelete = actor.roles.includes("admin");
 
   return (
     <div>
@@ -55,6 +55,7 @@ export default async function AdminAlunosPage() {
           city: profile?.city ?? "—",
           enrollments: countMap.get(user.id) ?? 0,
           status: user.status,
+          _actions: <AdminStudentActions student={{ id: user.id, name: user.name, email: user.email, phone: profile?.phone ?? "", city: profile?.city ?? "" }} canDelete={canDelete} />,
         }))}
         emptyTitle="Nenhum aluno cadastrado"
         emptyDescription="Cadastre acima ou aguarde os cadastros pelo site."

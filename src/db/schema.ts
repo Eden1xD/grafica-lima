@@ -552,3 +552,42 @@ export type Certificate = typeof certificates.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type Teacher = typeof teachers.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
+
+
+export const certificateTemplates = pgTable(
+  "certificate_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    name: text("name").notNull(),
+
+    pdfBase64: text("pdf_base64").notNull(),
+
+    layout: jsonb("layout")
+      .notNull()
+      .default({}),
+
+    sponsors: jsonb("sponsors")
+      .notNull()
+      .default([]),
+
+    active: boolean("active")
+      .notNull()
+      .default(false),
+
+    courseId: uuid("course_id")
+      .references(() => courses.id, {
+        onDelete: "set null",
+      }),
+
+    isDefault: boolean("is_default")
+      .notNull()
+      .default(false),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  }
+);

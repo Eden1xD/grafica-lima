@@ -3,19 +3,19 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { courseCategories, courses } from "@/db/schema";
 import { requireRole, STAFF } from "@/lib/auth/guards";
-import { deleteDraftCourseAction } from "@/server/actions/admin-courses";
 import { DataTable } from "@/components/data-table";
-import { Collapse, ActionForm } from "@/components/action-form";
+import { Collapse } from "@/components/action-form";
 import { CourseForm, CategoryQuickForm, RoomQuickForm } from "@/components/admin-forms";
 import { LinkButton, PageTitle } from "@/components/ui";
+import { AdminCourseDelete } from "@/components/admin-course-delete";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Cursos — administração" };
 
 export default async function AdminCursosPage() {
-  await requireRole(STAFF, "/admin/cursos");
-  const rows = await db
-    .select({ course: courses, category: courseCategories.name })
+  const actor = await requireRole(STAFF, "/admin/cursos");
+  const canDelete = actor.roles.includes("admin");
+  const rows = await db.select({ course: courses, category: courseCategories.name })
     .from(courses)
     .leftJoin(courseCategories, eq(courseCategories.id, courses.categoryId))
     .orderBy(asc(courses.name));
@@ -51,9 +51,7 @@ export default async function AdminCursosPage() {
           _actions: (
             <div className="flex items-center justify-end gap-2">
               <LinkButton href={`/admin/cursos/${course.id}`} variant="secondary" size="sm">Editar</LinkButton>
-              {course.status === "rascunho" ? (
-                <ActionForm action={deleteDraftCourseAction} hidden={{ id: course.id }} submitLabel="Excluir" submitVariant="ghost" submitSize="sm" confirm="Excluir este rascunho?" />
-              ) : null}
+              {canDelete ? <AdminCourseDelete id={course.id} name={course.name} /> : null}
             </div>
           ),
         }))}
