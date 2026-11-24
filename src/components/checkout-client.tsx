@@ -1,5 +1,4 @@
 "use client";
-
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote, CalendarDays, Check, CheckCircle2, ChevronLeft, Copy, CreditCard, Landmark, MapPin, QrCode, ShieldCheck } from "lucide-react";
@@ -10,12 +9,10 @@ import { isMinor, splitInstallments } from "@/lib/domain";
 import { brl, cn, fmtDate, onlyDigits, todayISO } from "@/lib/utils";
 import { Alert, Badge, btnCls, Card, Field, Input, Select, Spinner } from "@/components/ui";
 import { toast } from "@/components/action-form";
-
 type Profile = {
   cpf: string; birthDate: string; phone: string; cep: string; street: string; number: string;
   complement: string; district: string; city: string; state: string; guardianName: string; guardianCpf: string; guardianPhone: string;
 };
-
 type Props = {
   cohortId: string;
   userName: string;
@@ -29,9 +26,7 @@ type Props = {
   contractText: string;
   cancellationText: string;
 };
-
 const STEPS = ["Dados pessoais", "Revisão e contrato", "Pagamento"];
-
 export function CheckoutClient(p: Props) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -47,20 +42,16 @@ export function CheckoutClient(p: Props) {
   const [pix, setPix] = useState<{ paymentId: string; qrCode: string; qrBase64: string } | null>(null);
   const [checking, setChecking] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const [profileState, profileAction, profilePending] = useActionState(saveCheckoutProfileAction, IDLE);
   const [couponState, couponAction, couponPending] = useActionState(couponPreviewAction, IDLE);
   const [enrollState, enrollAction, enrollPending] = useActionState(createEnrollmentAction, IDLE);
-
   const minor = birthDate ? isMinor(birthDate, todayISO()) : false;
   const net = p.course.priceCents - (appliedCoupon?.discountCents ?? 0);
   const split = splitInstallments(net, p.course.entryCents, months);
-
   useEffect(() => {
     if (profileState.status === "ok") setStep(1);
     if (profileState.status === "error" && profileState.message) toast("error", profileState.message);
   }, [profileState]);
-
   useEffect(() => {
     if (couponState.status === "ok" && couponState.data) {
       setAppliedCoupon({ code: String(couponState.data.code), discountCents: Number(couponState.data.discountCents) });
@@ -71,7 +62,6 @@ export function CheckoutClient(p: Props) {
       if (couponState.message) toast("error", couponState.message);
     }
   }, [couponState]);
-
   useEffect(() => {
     if (enrollState.status === "error" && enrollState.message) toast("error", enrollState.message);
     if (enrollState.status === "ok" && enrollState.data) {
@@ -82,7 +72,6 @@ export function CheckoutClient(p: Props) {
       else router.push(`/matricula/confirmacao?enrollment=${d.enrollmentId}`);
     }
   }, [enrollState, router]);
-
   async function checkNow(paymentId: string) {
     setChecking(true);
     try {
@@ -102,7 +91,6 @@ export function CheckoutClient(p: Props) {
       setChecking(false);
     }
   }
-
   useEffect(() => {
     if (!pix) return;
     pollRef.current = setInterval(() => void checkNow(pix.paymentId), 6000);
@@ -111,7 +99,6 @@ export function CheckoutClient(p: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pix]);
-
   async function lookupCep() {
     const digits = onlyDigits(addr.cep);
     if (digits.length !== 8) return;
@@ -129,12 +116,11 @@ export function CheckoutClient(p: Props) {
       setCepLoading(false);
     }
   }
-
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div>
+    <div className="grid w-full min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+      <div className="min-w-0">
         {/* Progresso */}
-        <ol className="mb-8 flex items-center gap-2" aria-label="Etapas da matrícula">
+        <ol className="mb-5 flex items-center gap-2 sm:mb-8" aria-label="Etapas da matrícula">
           {STEPS.map((s, i) => (
             <li key={s} className="flex flex-1 items-center gap-2">
               <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold", i < step ? "bg-success text-white" : i === step ? "bg-brand text-white" : "bg-surface2 text-muted")}>
@@ -145,14 +131,13 @@ export function CheckoutClient(p: Props) {
             </li>
           ))}
         </ol>
-
         {/* ETAPA 1 — DADOS */}
         {step === 0 ? (
-          <Card className="p-6">
+          <Card className="w-full min-w-0 p-4 sm:p-6">
             <h1 className="text-lg font-bold text-ink">Seus dados para a matrícula</h1>
             <p className="mt-1 text-sm text-muted">Olá, {p.userName.split(" ")[0]}! Precisamos destes dados para o contrato. Eles ficam salvos para as próximas matrículas.</p>
             {!p.emailVerified ? <Alert variant="warn" className="mt-3">Seu e-mail ainda não foi verificado — confira sua caixa de entrada (opcional para pagar, recomendado para recuperar a conta).</Alert> : null}
-            <form action={profileAction} className="mt-6 grid gap-4 sm:grid-cols-2">
+            <form action={profileAction} className="mt-6 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="CPF"><Input name="cpf" required defaultValue={p.profile?.cpf ?? ""} inputMode="numeric" placeholder="000.000.000-00" /></Field>
               <Field label="Data de nascimento"><Input name="birthDate" type="date" required value={birthDate} onChange={(e) => setBirthDate(e.target.value)} /></Field>
               <Field label="Telefone / WhatsApp"><Input name="phone" required defaultValue={p.profile?.phone ?? ""} autoComplete="tel" placeholder="(00) 00000-0000" /></Field>
@@ -163,7 +148,7 @@ export function CheckoutClient(p: Props) {
               <Field label="Número"><Input name="number" required defaultValue={p.profile?.number ?? ""} placeholder="Nº" /></Field>
               <Field label="Complemento (opcional)"><Input name="complement" defaultValue={p.profile?.complement ?? ""} placeholder="Apto, bloco…" /></Field>
               <Field label="Bairro"><Input name="district" required value={addr.district} onChange={(e) => setAddr({ ...addr, district: e.target.value })} /></Field>
-              <div className="grid grid-cols-[1fr_88px] gap-3">
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_72px] gap-3">
                 <Field label="Cidade"><Input name="city" required value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} /></Field>
                 <Field label="UF"><Input name="state" required maxLength={2} value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value.toUpperCase() })} /></Field>
               </div>
@@ -177,7 +162,7 @@ export function CheckoutClient(p: Props) {
                   </div>
                 </div>
               ) : null}
-              <div className="sm:col-span-2 flex items-center justify-between gap-3">
+              <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted">Seus dados são salvos com segurança (LGPD).</p>
                 <button type="submit" disabled={profilePending} className={btnCls("primary", "md")}>
                   {profilePending ? <Spinner /> : null} Salvar e continuar
@@ -187,11 +172,10 @@ export function CheckoutClient(p: Props) {
             </form>
           </Card>
         ) : null}
-
         {/* ETAPA 2 — REVISÃO */}
         {step === 1 ? (
           <div className="space-y-5">
-            <Card className="p-6">
+            <Card className="w-full min-w-0 p-4 sm:p-6">
               <h2 className="text-lg font-bold text-ink">Forma de pagamento do curso</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className={cn("cursor-pointer rounded-2xl border-2 p-4 transition", plan === "integral" ? "border-brand bg-brand-soft" : "border-line hover:border-brand/40")}>
@@ -208,7 +192,7 @@ export function CheckoutClient(p: Props) {
                 </label>
               </div>
               {plan === "mensal" ? (
-                <div className="mt-4 flex items-end gap-3">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
                   <Field label="Número de mensalidades">
                     <Select value={months} onChange={(e) => setMonths(Number(e.target.value))}>
                       {Array.from({ length: p.course.maxInstallments }, (_, i) => i + 1).map((n) => (
@@ -221,16 +205,15 @@ export function CheckoutClient(p: Props) {
               ) : null}
               <div className="mt-5 border-t border-line pt-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted">Cupom de desconto</p>
-                <form action={couponAction} className="mt-2 flex gap-2">
+                <form action={couponAction} className="mt-2 flex flex-wrap gap-2">
                   <input type="hidden" name="cohortId" value={p.cohortId} />
-                  <Input name="coupon" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} placeholder="CÓDIGO" className="max-w-48 font-mono uppercase" />
+                  <Input name="coupon" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} placeholder="CÓDIGO" className="min-w-0 flex-1 font-mono uppercase" />
                   <button type="submit" disabled={couponPending} className={btnCls("secondary", "md")}>{couponPending ? <Spinner /> : null} Aplicar</button>
                   {appliedCoupon ? <Badge variant="success" className="self-center">−{brl(appliedCoupon.discountCents)}</Badge> : null}
                 </form>
               </div>
             </Card>
-
-            <Card className="p-6">
+            <Card className="w-full min-w-0 p-4 sm:p-6">
               <h2 className="text-lg font-bold text-ink">Contrato de prestação de serviços</h2>
               <div className="mt-3 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-line bg-bg p-4 text-xs leading-relaxed text-muted">{p.contractText}</div>
               <details className="mt-3 text-xs text-muted">
@@ -242,27 +225,25 @@ export function CheckoutClient(p: Props) {
                 Li e aceito o contrato e a política de cancelamento.
               </label>
             </Card>
-
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button onClick={() => setStep(0)} className={btnCls("ghost", "md")}><ChevronLeft className="h-4 w-4" /> Voltar</button>
               <button onClick={() => setStep(2)} disabled={!accepted} className={btnCls("primary", "md")}>Ir para pagamento</button>
             </div>
           </div>
         ) : null}
-
         {/* ETAPA 3 — PAGAMENTO */}
         {step === 2 ? (
-          <Card className="p-6">
+          <Card className="w-full min-w-0 p-4 sm:p-6">
             {pix ? (
               <div className="text-center">
-                <h2 className="flex items-center justify-center gap-2 text-lg font-bold text-ink"><QrCode className="h-5 w-5 text-brand" /> Pague com Pix</h2>
+                <h2 className="flex items-center justify-center gap-2 text-lg font-bold text-ink"><QrCode className="h-5 w-5 shrink-0 text-brand" /> Pague com Pix</h2>
                 <p className="mt-1 text-sm text-muted">Escaneie o QR Code ou use o copia e cola. A confirmação é automática.</p>
                 {pix.qrBase64 ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`data:image/png;base64,${pix.qrBase64}`} alt="QR Code Pix" className="mx-auto mt-5 h-56 w-56 rounded-2xl border border-line bg-white p-2" />
+                  <img src={`data:image/png;base64,${pix.qrBase64}`} alt="QR Code Pix" className="mx-auto mt-5 h-auto w-56 max-w-full rounded-2xl border border-line bg-white p-2" />
                 ) : null}
-                <div className="mx-auto mt-4 flex max-w-md gap-2">
-                  <input readOnly value={pix.qrCode} aria-label="Pix copia e cola" className="h-10 flex-1 truncate rounded-xl border border-line bg-bg px-3 font-mono text-xs" onFocus={(e) => e.target.select()} />
+                <div className="mx-auto mt-4 flex min-w-0 max-w-md flex-col gap-2 sm:flex-row">
+                  <input readOnly value={pix.qrCode} aria-label="Pix copia e cola" className="h-10 w-full min-w-0 flex-1 truncate rounded-xl border border-line bg-bg px-3 font-mono text-xs" onFocus={(e) => e.target.select()} />
                   <button
                     className={btnCls("secondary", "md")}
                     onClick={async () => {
@@ -295,24 +276,24 @@ export function CheckoutClient(p: Props) {
                     { id: "cartao" as const, icon: CreditCard, title: "Cartão de crédito", desc: `Checkout seguro do gateway · até ${p.course.maxInstallments}x`, enabled: p.methods.card },
                     { id: "manual" as const, icon: Landmark, title: "Pagar na secretaria", desc: "Reserva de 48h · dinheiro, Pix ou cartão presencial", enabled: p.methods.manual },
                   ].map((m) => (
-                    <label key={m.id} className={cn("flex items-center gap-3 rounded-2xl border-2 p-4 transition", !m.enabled ? "cursor-not-allowed opacity-50" : "cursor-pointer", method === m.id && m.enabled ? "border-brand bg-brand-soft" : "border-line hover:border-brand/40")}>
+                    <label key={m.id} className={cn("flex w-full min-w-0 flex-wrap items-start gap-2 rounded-xl border-2 p-3 transition sm:flex-nowrap sm:items-center sm:gap-3 sm:p-4", !m.enabled ? "cursor-not-allowed opacity-50" : "cursor-pointer", method === m.id && m.enabled ? "border-brand bg-brand-soft" : "border-line hover:border-brand/40")}>
                       <input type="radio" name="method" value={m.id} disabled={!m.enabled} checked={method === m.id} onChange={() => setMethod(m.id)} />
-                      <m.icon className="h-5 w-5 text-brand" />
-                      <span className="flex-1">
+                      <m.icon className="h-5 w-5 shrink-0 text-brand" />
+                      <span className="min-w-0 flex-1 break-words">
                         <span className="block text-sm font-bold text-ink">{m.title}</span>
-                        <span className="block text-xs text-muted">{m.enabled ? m.desc : "Indisponível — gateway de pagamento não configurado"}</span>
+                        <span className="block text-xs text-muted">{m.enabled ? m.desc : "Indisponível no momento"}</span>
                       </span>
                       {m.id === "pix" && m.enabled ? <Badge variant="success">Recomendado</Badge> : null}
                     </label>
                   ))}
                   {!p.methods.gatewayConfigured ? (
-                    <Alert variant="info" className="text-xs">Pagamentos online (Pix/cartão) exigem a configuração do gateway Mercado Pago pelo administrador. O pagamento na secretaria funciona normalmente.</Alert>
+                    <Alert variant="info" className="text-xs">Pagamentos online temporariamente indisponíveis. Você pode reservar sua vaga e pagar na secretaria, quando disponível.</Alert>
                   ) : null}
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
                     <button type="button" onClick={() => setStep(1)} className={btnCls("ghost", "md")}><ChevronLeft className="h-4 w-4" /> Voltar</button>
-                    <button type="submit" disabled={enrollPending || !accepted} className={btnCls("primary", "lg")}>
+                    <button type="submit" disabled={enrollPending || !accepted || !(method === "manual" ? p.methods.manual : method === "pix" ? p.methods.pix : p.methods.card)} className={cn(btnCls("primary", "lg"), "w-full min-w-0 whitespace-normal text-center leading-snug sm:w-auto")}>
                       {enrollPending ? <Spinner /> : <ShieldCheck className="h-4 w-4" />}
-                      {method === "manual" ? "Reservar vaga e pagar na secretaria" : method === "pix" ? "Gerar Pix" : "Ir para checkout seguro"}
+                      {method === "manual" ? "Reservar minha vaga" : method === "pix" ? "Gerar Pix" : "Ir para checkout seguro"}
                     </button>
                   </div>
                 </form>
@@ -321,27 +302,26 @@ export function CheckoutClient(p: Props) {
           </Card>
         ) : null}
       </div>
-
       {/* RESUMO LATERAL */}
-      <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-        <Card className="p-5">
+      <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24">
+        <Card className="min-w-0 break-words p-4 sm:p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-muted">Resumo da matrícula</p>
           <p className="mt-2 font-bold text-ink">{p.course.name}</p>
           <p className="text-sm text-muted">{p.cohort.name}</p>
           <div className="mt-3 space-y-1.5 text-xs text-muted">
-            <p className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-brand" />{p.cohort.days} · {p.cohort.time}</p>
-            <p className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-brand" />{fmtDate(p.cohort.startDate)} a {fmtDate(p.cohort.endDate)}</p>
-            {p.address ? <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-brand" />{p.address}</p> : null}
+            <p className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-brand" />{p.cohort.days} · {p.cohort.time}</p>
+            <p className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-brand" />{fmtDate(p.cohort.startDate)} a {fmtDate(p.cohort.endDate)}</p>
+            {p.address ? <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0 text-brand" />{p.address}</p> : null}
           </div>
           <div className="mt-4 space-y-1.5 border-t border-line pt-3 text-sm">
-            <div className="flex justify-between text-muted"><span>Valor do curso</span><span>{brl(p.course.priceCents)}</span></div>
-            {appliedCoupon ? <div className="flex justify-between text-success"><span>Cupom {appliedCoupon.code}</span><span>−{brl(appliedCoupon.discountCents)}</span></div> : null}
-            <div className="flex justify-between font-bold text-ink"><span>Total</span><span>{brl(net)}</span></div>
+            <div className="flex flex-wrap justify-between gap-x-2 text-muted"><span>Valor do curso</span><span>{brl(p.course.priceCents)}</span></div>
+            {appliedCoupon ? <div className="flex flex-wrap justify-between gap-x-2 text-success"><span>Cupom {appliedCoupon.code}</span><span>−{brl(appliedCoupon.discountCents)}</span></div> : null}
+            <div className="flex flex-wrap justify-between gap-x-2 font-bold text-ink"><span>Total</span><span>{brl(net)}</span></div>
             {plan === "mensal" ? (
               <div className="rounded-xl bg-bg p-3 text-xs text-muted">
-                <p className="flex justify-between"><span>Entrada (agora)</span><strong className="text-ink">{brl(split.entryCents)}</strong></p>
+                <p className="flex flex-wrap justify-between gap-x-2"><span>Entrada (agora)</span><strong className="text-ink">{brl(split.entryCents)}</strong></p>
                 {split.installments.map((v, i) => (
-                  <p key={i} className="mt-1 flex justify-between"><span>Mensalidade {i + 1}</span><span>{brl(v)}</span></p>
+                  <p key={i} className="mt-1 flex flex-wrap justify-between gap-x-2"><span>Mensalidade {i + 1}</span><span>{brl(v)}</span></p>
                 ))}
               </div>
             ) : null}
